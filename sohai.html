@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Changer PRO - Advanced GIS Forecast</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" /> 
+
+    <style>
+        /* 1. Global Styles and Variables */
+        :root {
+            --dark-bg: #0d1117; 
+            --card-bg: #161b22; 
+            --neon-green: #00ffc8; 
+            --neon-purple: #6610f2; 
+            --accent-gradient: linear-gradient(90deg, var(--neon-purple), var(--neon-green)); 
+        }
+        body {
+            background-color: var(--dark-bg);
+            color: var(--neon-green);
+            font-family: 'Roboto Mono', monospace; 
+            min-height: 100vh;
+            padding-top: 60px; /* Space for fixed navbar */
+        }
+        h1, h2, h3, h4, .navbar-brand {
+            font-family: 'Orbitron', sans-serif; 
+            color: #ffffff; 
+        }
+        /* 2. Fixed Navigation Bar */
+        .navbar {
+            position: fixed; 
+            top: 0;
+            left: 0;
+            right: 0;
+            background-color: var(--dark-bg) !important;
+            z-index: 1020;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+        /* 3. Tech Card & Buttons */
+        .btn-tech { background: var(--accent-gradient); border: none; color: var(--dark-bg); font-weight: 700; transition: all 0.3s ease; }
+        .tech-card {
+            background-color: var(--card-bg);
+            border: 1px solid transparent;
+            border-image: var(--accent-gradient);
+            border-image-slice: 1;
+            box-shadow: 0 0 15px rgba(0, 255, 200, 0.4); 
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+        }
+        .tech-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 255, 200, 0.6);
+        }
+        .metric-value-box {
+            background-color: #21262d;
+            border-left: 3px solid var(--neon-green);
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .metric-value-box i {
+            color: var(--neon-purple);
+            font-size: 1.5rem;
+            margin-right: 10px;
+        }
+
+        /* 4. Map Container */
+        #mapContainer { height: 350px; border: 2px solid var(--neon-green); border-radius: 5px; }
+        
+        /* 5. Prompt Box */
+        .prompt-box {
+            background-color: #21262d;
+            border-left: 5px solid var(--neon-green);
+            color: white;
+            padding: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+        .prompt-hot { border-left-color: #dc3545; color: #dc3545; }
+        .prompt-cold { border-left-color: #0d6efd; color: #0d6efd; }
+        .prompt-cloudy { border-left-color: #ffc107; color: #ffc107; }
+
+        .form-control { background-color: #21262d; border-color: var(--neon-green); color: white; }
+        .circular-progress { width: 100px; height: 100px; border-radius: 50%; background: conic-gradient(var(--neon-green) 0%, var(--neon-purple) 75%, #21262d 75%); position: relative; box-shadow: 0 0 10px var(--neon-green); }
+        .inner-circle { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 75px; height: 75px; border-radius: 50%; background-color: var(--card-bg); display: flex; align-items: center; justify-content: center; }
+
+        /* Quiz Specific Styles for Learn More content */
+        .learn-section {
+            background-color: #21262d;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border: 1px solid var(--neon-purple);
+        }
+        .learn-section h4 {
+            color: var(--neon-green);
+            border-bottom: 2px solid var(--neon-purple);
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+        }
+        
+        /* Quiz Styling */
+        .quiz-question {
+            background-color: #1a1f26;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border-left: 3px solid var(--neon-green);
+        }
+        .quiz-option {
+            padding: 8px;
+            margin-top: 5px;
+            border: 1px solid #30363d;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            color: #ccc;
+        }
+        .quiz-option:hover {
+            background-color: #30363d;
+        }
+        .correct-answer {
+            background-color: #28a745 !important; /* Green */
+            color: #fff;
+            font-weight: bold;
+        }
+        .incorrect-answer {
+            background-color: #dc3545 !important; /* Red */
+            color: #fff;
+            font-weight: bold;
+        }
+        .quiz-status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        /* Custom styles for the formatted report display */
+        .formatted-report table {
+            width: 100%;
+            margin-top: 15px;
+            border-collapse: collapse;
+        }
+        .formatted-report th, .formatted-report td {
+            padding: 10px;
+            border: 1px solid #30363d;
+            text-align: left;
+        }
+        .formatted-report th {
+            background-color: #1a1f26;
+            color: var(--neon-green);
+        }
+        .formatted-report .risk-value {
+            font-weight: bold;
+            color: #ff4d4d; /* Reddish for risk */
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid mx-3">
+            <a class="navbar-brand" href="#">🛰️ WEATHER CHANGER PRO <span class="badge bg-danger">ADVANCED</span></a> 
+            <div class="d-flex align-items-center ms-auto">
+                <button class="btn btn-tech me-4" type="button" data-bs-toggle="modal" data-bs-target="#learnMoreModal">
+                    <i class="fa-solid fa-book-open me-2"></i> LEARN MORE
+                </button>
+                <span class="text-white-50">SELECTED REGION:</span> <span class="badge bg-success ms-1" id="locationStatus">SIBU, MY</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+        <header class="text-center mb-5">
+            <h1 class="display-5 mb-1">ADVANCED GIS FORECAST ANALYSER</h1>
+            <p class="lead text-white-50">Predicting multi-dimensional risks based on location, time, and environmental factors.</p>
+        </header>
+
+        <div class="row mb-4">
+            
+            <div class="col-lg-7 mb-4">
+                <div class="tech-card p-4 h-100" style="cursor: default; transform: none; box-shadow: none;"> 
+                    <h3 class="mb-3">📍 REGION SELECTION & REAL-TIME PROMPT</h3>
+
+                    <div id="mapContainer"></div>
+                    
+                    <div class="metric-value-box mt-3">
+                        <i class="fa-solid fa-location-dot"></i>
+                        <span class="text-white-50 me-2">LAST ANALYZED COORDS:</span>
+                        <span id="currentCoordsDisplay" class="text-white fw-bold">Lat: N/A, Lon: N/A</span>
+                    </div>
+
+                    <div id="riskPrompt" class="prompt-box mt-3 text-center">
+                        Click 'RUN FORECAST' to begin risk assessment.
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-5 mb-4">
+                <div class="tech-card p-4 h-100" style="cursor: default; transform: none; box-shadow: none;">
+                    <h3 class="mb-3">⚙️ CONTROL PANEL</h3>
+                    
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label text-white-50 small">Country (e.g., Malaysia)</label>
+                            <input type="text" class="form-control" id="countryInput" value="Malaysia" placeholder="Country Name">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-white-50 small">District/City (e.g., Sibu)</label>
+                            <input type="text" class="form-control" id="cityInput" value="Sibu" placeholder="City Name" oninput="resetMapClickStatus()"> 
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label text-white-50 small">Forecast Date</label>
+                            <input type="date" class="form-control" id="dateInput">
+                        </div>
+                        <div class="col-6">
+                            <input type="hidden" id="latInput" value="">
+                            <input type="hidden" id="lonInput" value="">
+                        </div>
+                    </div>
+                    
+                    <button class="btn btn-tech w-100 mb-3" type="button" id="fetchWeatherBtn">RUN FORECAST AND ANALYSE</button>
+                    
+                    <hr style="border-top: 1px dashed var(--neon-green);">
+
+                    <h4 class="mb-2">❓ ASK PROJECT LEAD</h4>
+                    <input type="text" class="form-control mb-2" id="askQuestionInput" placeholder="Enter your query and press Enter...">
+                    <small id="askQuestionStatus" class="text-white-50">Console ready. Awaiting query...</small>
+
+                    <hr style="border-top: 1px dashed var(--neon-green);">
+
+                    <h4 class="mb-2">💾 DATA EXPORT</h4>
+                    <button class="btn btn-outline-success w-100 mb-3" type="button" data-bs-toggle="modal" data-bs-target="#downloadModal">
+                        <i class="fa-solid fa-file-export me-2"></i> VIEW ANALYSED REPORT
+                    </button>
+                    <small id="downloadStatus" class="text-white-50 mt-1 d-block">Click to view the final analysis report.</small>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            
+            <div class="col-lg-4 mb-4">
+                <div class="tech-card p-4 h-100" data-bs-toggle="modal" data-bs-target="#riskDetailModal">
+                    <h3 class="mb-4">⚙️ UNCOMFORTABLE RISK INDEX</h3>
+                    <div class="d-flex justify-content-center align-items-center mb-3">
+                        <div class="circular-progress" id="riskCircle">
+                            <div class="inner-circle">
+                                <span class="h3 score-text" id="riskDisplay" style="color: white; font-family: 'Orbitron';">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <p class="text-white-50 small text-center mb-1">
+                        T: <span id="tempDisplay">N/A</span>°C | H: <span id="humidityDisplay">N/A</span>% | V: <span id="windDisplay">N/A</span> m/s
+                    </p>
+                    <div id="resultArea" class="alert alert-info mt-3" role="alert">
+                        <small class="text-dark fw-bold" id="weatherStatusText">Select a region to begin.</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4 mb-4">
+                <div class="tech-card p-4 h-100" data-bs-toggle="modal" data-bs-target="#metricsDetailModal">
+                    <h3 class="mb-4">🌡️ EXTENDED METRICS</h3>
+                    
+                    <div class="metric-value-box">
+                        <i class="fa-solid fa-temperature-half"></i>
+                        <span class="text-white-50 small">FEELS LIKE TEMP</span>
+                        <h4 class="mt-1"><span id="feelsLikeDisplay">N/A</span>°C</h4>
+                    </div>
+                    
+                    <div class="metric-value-box">
+                        <i class="fa-solid fa-gauge-high"></i>
+                        <span class="text-white-50 small">PRESSURE</span>
+                        <h4 class="mt-1"><span id="pressureDisplay">N/A</span> hPa</h4>
+                    </div>
+
+                    <h4 class="mt-4 mb-2">📊 THRESHOLD ANALYSIS</h4>
+                    <canvas id="radarChart"></canvas>
+                </div>
+            </div>
+
+
+            <div class="col-lg-4">
+                <div class="tech-card p-4 mb-4" data-bs-toggle="modal" data-bs-target="#advisoryDetailModal">
+                    <h3 class="mb-3">🧘‍♀️ OUTDOOR ACTIVITY ADVISORY</h3>
+                    <p class="lead" id="activityTip" style="color: var(--neon-green);">No data analyzed yet. Select date and region.</p>
+                </div>
+
+                <div class="tech-card p-4" data-bs-toggle="modal" data-bs-target="#cloudDetailModal">
+                    <h3 class="mb-3">☁️ CLOUD COVER CHECK</h3>
+                    <p class="text-white-50">Cloud Cover: <span id="cloudCover">N/A</span>%</p>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar" role="progressbar" id="cloudBar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <p class="mt-2 small" id="cloudTip">Ready to analyze.</p>
+                </div>
+            </div>
+        </div> 
+    </div>
+    
+    <div class="modal fade" id="downloadModal" tabindex="-1" aria-labelledby="downloadModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content" style="background-color: var(--card-bg); border-color: var(--neon-green);">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="downloadModalLabel" style="color: var(--neon-green);">📊 FINAL ANALYSIS REPORT</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-white">
+                    <div id="formattedReportOutput" class="formatted-report">
+                        <p class="text-white-50 text-center">Please run a forecast analysis first to generate the report data.</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-light" id="actualDownloadBtn"><i class="fa-solid fa-download me-2"></i> DOWNLOAD RAW JSON FILE</button>
+                    <button type="button" class="btn btn-tech" data-bs-dismiss="modal">CLOSE REPORT</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="metricsDetailModal" tabindex="-1" aria-labelledby="metricsDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content" style="background-color: var(--card-bg); border-color: var(--neon-green);">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="metricsDetailModalLabel" style="color: var(--neon-green);">🔬 METRICS FULL REPORT</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-white">
+                    <p><strong>Region:</strong> <span id="detailRegionName">N/A</span></p>
+                    <p><strong>Current Temperature:</strong> <span id="detailTemp">N/A</span>°C</p>
+                    <p><strong>Feels Like:</strong> <span id="detailFeelsLike" class="text-warning">N/A</span>°C <span class="small text-white-50">(Humidity/Wind Adjusted)</span></p>
+                    <p><strong>Pressure:</strong> <span id="detailPressure" class="text-info">N/A</span> hPa <span class="small text-white-50">(Atmospheric Stability Index)</span></p>
+                    <p><strong>Humidity:</strong> <span id="detailHumidity">N/A</span>%</p>
+                    <p><strong>Wind Speed:</strong> <span id="detailWindSpeed">N/A</span> m/s</p>
+                    <hr style="border-top: 1px dashed var(--neon-purple);">
+                    <p class="small text-white-50">This view provides deeper analysis on core weather variables impacting risk assessment.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" style="background-color: #21262d; border-color: var(--neon-purple);" data-bs-dismiss="modal">CLOSE</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal fade" id="learnMoreModal" tabindex="-1" aria-labelledby="learnMoreModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content" style="background-color: var(--card-bg); border-color: var(--neon-green);">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="learnMoreModalLabel" style="color: var(--neon-green);"><i class="fa-solid fa-lightbulb me-2"></i> KNOWLEDGE CORE: GIS & METEOROLOGY</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-white" id="learnMoreContainer">
+                    
+                    <div class="learn-section">
+                        <h4>🌧️ The Water Cycle & Rain Formation</h4>
+                        <p>Rain is essential to the **Water Cycle**. It involves three key steps:</p>
+                        <ul>
+                            <li>**Evaporation:** Solar heat turns surface water into vapor.</li>
+                            <li>**Condensation:** Vapor rises, cools, and forms tiny droplets or ice crystals, creating **clouds**.</li>
+                            <li>**Precipitation:** Droplets accumulate and fall to the ground due to gravity (rain, snow, hail).</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="learn-section">
+                        <h4>🌍 Key Meteorological Concepts</h4>
+                        <p>Understanding these variables is crucial for risk analysis:</p>
+                        <ul>
+                            <li>**Atmospheric Pressure (hPa):** The force exerted by the air's weight. High pressure brings clear skies; low pressure is associated with storms.</li>
+                            <li>**Feels Like Temperature:** The human-perceived temperature, calculated by combining the actual air temperature with **humidity** (Heat Index) and **wind speed** (Wind Chill).</li>
+                            <li>**Geographic Information System (GIS):** A system used for capturing, analyzing, and managing location-based data. This application uses GIS ($\text{Lat/Lon}$) to pinpoint weather data on the map.</li>
+                        </ul>
+                    </div>
+
+                    <h3 class="mt-4 mb-3 text-center" style="color: var(--neon-green);">🧠 RISK ANALYSIS QUIZ (5 Questions)</h3>
+                    <p class="text-white-50 text-center">Test your understanding of the application's core logic and weather concepts.</p>
+                    
+                    <hr style="border-top: 1px dashed var(--neon-purple);">
+
+                    <div id="simpleQuizContainer">
+                        </div>
+                    <div id="quizScoreDisplay" class="quiz-status alert alert-info text-dark text-center" style="display:none;"></div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" style="background-color: #21262d; border-color: var(--neon-purple);" data-bs-dismiss="modal">CLOSE</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script> 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script> 
+
+    <script>
+        // ******************************************************************************
+        // ************************* 1. CONFIGURATION & INITIALIZATION ******************
+        // ******************************************************************************
+        
+        // ==============================================================================
+        // !!!!!! 核心修改：请将你的 OpenWeatherMap API Key 粘贴到下面的双引号内 !!!!!!
+        // ==============================================================================
+        const API_KEY = "0fb4555801f76b6811d706920e8ec067";
+        // ==============================================================================
+        
+        const CURRENT_WEATHER_URL = "https://api.openweathermap.org/data/2.5/weather";
+        const FORECAST_URL = "https://api.openweathermap.org/data/2.5/forecast"; 
+        
+        let currentLat = 2.2965; 
+        let currentLon = 111.8398; 
+        let selectedRegionName = "Sibu, MY"; 
+        let isMapClickQuery = false; 
+        let map;
+        let marker;
+        let radarChart;
+        let lastAnalyzedData = {}; 
+
+        const THRESHOLDS = {
+            'Very Hot': 30,      
+            'Very Cold': 5,      
+            'Very Wet': 80,      
+            'Very Windy': 10,    
+            'Too Cloudy': 75     
+        };
+
+        const dateInput = document.getElementById('dateInput');
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.value = today;
+        dateInput.min = today;
+        
+        Chart.defaults.color = '#e3e3e3'; 
+        Chart.defaults.borderColor = 'rgba(0, 255, 200, 0.2)'; 
+        
+        // --- 2. Quiz Data ---
+        const QUIZ_DATA = [
+            {
+                question: "1. Which pair of query parameters is used to fetch weather data for a map coordinate?",
+                options: ["q and id", "city and country", "lat and lon", "q and date"],
+                answer: 2 
+            },
+            {
+                question: "2. The 'Feels Like Temperature' is calculated using which factors?",
+                options: ["Air temperature and cloud cover", "Air temperature and pressure", "Temperature, humidity, and wind speed", "Humidity and pressure only"],
+                answer: 2 
+            },
+            {
+                question: "3. What humidity percentage triggers the 'Very Wet' risk condition in the system?",
+                options: ["60%", "70%", "80%", "90%"],
+                answer: 2 
+            },
+            {
+                question: "4. What is the primary role of the Leaflet.js library in this application?",
+                options: ["Calculating the Risk Index", "Creating interactive maps", "Formatting the data download", "Fetching weather data from the API"],
+                answer: 1 
+            },
+            {
+                question: "5. A total 'Uncomfortable Risk Index' above 70% usually leads to which advisory?",
+                options: ["Optimal conditions", "Fair conditions", "Caution: Limited activity", "Danger: Postpone outdoor activity"],
+                answer: 3 
+            }
+        ];
+
+        // --- 3. Quiz Rendering and Logic ---
+        function renderQuiz() {
+            const container = document.getElementById('simpleQuizContainer');
+            container.innerHTML = '';
+            let quizHTML = '';
+
+            // 重置分数
+            quizScores = new Array(QUIZ_DATA.length).fill(null);
+            document.getElementById('quizScoreDisplay').style.display = 'none';
+
+            QUIZ_DATA.forEach((q, qIndex) => {
+                quizHTML += `<div class="quiz-question" data-question-index="${qIndex}">`;
+                quizHTML += `<p class="fw-bold">${q.question}</p>`;
+                
+                q.options.forEach((option, oIndex) => {
+                    quizHTML += `<div class="quiz-option" data-option-index="${oIndex}">${option}</div>`;
+                });
+                
+                quizHTML += `</div>`;
+            });
+            container.innerHTML = quizHTML;
+            
+            document.querySelectorAll('.quiz-option').forEach(option => {
+                option.addEventListener('click', handleAnswerClick);
+            });
+        }
+        
+        let quizScores = new Array(QUIZ_DATA.length).fill(null);
+
+        function handleAnswerClick(event) {
+            const selectedOption = event.target;
+            const optionIndex = parseInt(selectedOption.getAttribute('data-option-index'));
+            const questionDiv = selectedOption.closest('.quiz-question');
+            const questionIndex = parseInt(questionDiv.getAttribute('data-question-index'));
+            const correctAnswerIndex = QUIZ_DATA[questionIndex].answer;
+            
+            // 确保只处理一次
+            if (quizScores[questionIndex] !== null) return;
+
+            // 禁用所有选项
+            questionDiv.querySelectorAll('.quiz-option').forEach(opt => {
+                opt.style.pointerEvents = 'none';
+            });
+
+            // 检查并记录分数
+            if (optionIndex === correctAnswerIndex) {
+                selectedOption.classList.add('correct-answer');
+                quizScores[questionIndex] = 1; 
+            } else {
+                selectedOption.classList.add('incorrect-answer');
+                questionDiv.querySelector(`[data-option-index="${correctAnswerIndex}"]`).classList.add('correct-answer');
+                quizScores[questionIndex] = 0; 
+            }
+
+            updateQuizScore();
+        }
+
+        function updateQuizScore() {
+            const totalAnswered = quizScores.filter(score => score !== null).length;
+            const totalCorrect = quizScores.filter(score => score === 1).length;
+            const scoreDisplay = document.getElementById('quizScoreDisplay');
+            
+            if (totalAnswered > 0) {
+                scoreDisplay.style.display = 'block';
+                scoreDisplay.classList.remove('alert-info', 'alert-success', 'alert-warning');
+                
+                if (totalAnswered === QUIZ_DATA.length) {
+                    const percentage = (totalCorrect / QUIZ_DATA.length) * 100;
+                    scoreDisplay.textContent = `Quiz Complete! Your final score is ${totalCorrect} out of ${QUIZ_DATA.length} (${percentage.toFixed(0)}%).`;
+                    if (percentage >= 80) {
+                        scoreDisplay.classList.add('alert-success');
+                    } else {
+                        scoreDisplay.classList.add('alert-warning');
+                    }
+                } else {
+                    scoreDisplay.textContent = `Progress: ${totalCorrect} correct out of ${totalAnswered} questions answered.`;
+                    scoreDisplay.classList.add('alert-info');
+                }
+            } else {
+                 scoreDisplay.style.display = 'none';
+            }
+        }
+        
+        // --- 4. Leaflet Map Initialization and Event Listeners ---
+        document.addEventListener('DOMContentLoaded', (event) => {
+            
+            const learnMoreModal = document.getElementById('learnMoreModal');
+            learnMoreModal.addEventListener('show.bs.modal', renderQuiz);
+
+            function updateCoordsDisplay(lat, lon, name) {
+                document.getElementById('currentCoordsDisplay').textContent = `Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}`;
+                document.getElementById('locationStatus').textContent = name.toUpperCase();
+            }
+
+            map = L.map('mapContainer', { minZoom: 2, zoomControl: false }).setView([currentLat, currentLon], 10);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+            
+            marker = L.marker([currentLat, currentLon]).addTo(map).bindPopup(selectedRegionName).openPopup();
+
+            updateCoordsDisplay(currentLat, currentLon, selectedRegionName);
+            
+            map.on('click', function(e) {
+                if (marker) {
+                    marker.setLatLng(e.latlng);
+                } else {
+                    marker = L.marker(e.latlng).addTo(map);
+                }
+                currentLat = e.latlng.lat;
+                currentLon = e.latlng.lng; 
+                
+                isMapClickQuery = true;
+                
+                document.getElementById('latInput').value = currentLat;
+                document.getElementById('lonInput').value = currentLon;
+
+                const mapPointName = `MAP COORDS: ${currentLat.toFixed(4)}, ${currentLon.toFixed(4)}`;
+                selectedRegionName = mapPointName;
+                marker.bindPopup(mapPointName).openPopup();
+                
+                document.getElementById('countryInput').value = 'Map Click';
+                document.getElementById('cityInput').value = 'Use RUN FORECAST';
+                
+                updateCoordsDisplay(currentLat, currentLon, 'MAP CLICK'); 
+            });
+            
+            // --- 重置地图点击状态 ---
+            window.resetMapClickStatus = function() {
+                isMapClickQuery = false;
+                document.getElementById('latInput').value = '';
+                document.getElementById('lonInput').value = '';
+            }
+
+            // --- Chart Initialization (Remains the same) ---
+            const radarSkills = ['Very Hot', 'Very Cold', 'Very Wet', 'Very Windy', 'Too Cloudy'];
+            const radarCtx = document.getElementById('radarChart');
+            radarChart = new Chart(radarCtx, {
+                type: 'radar',
+                data: {
+                    labels: radarSkills,
+                    datasets: [{
+                        label: 'Risk Proximity (0-100)',
+                        data: [0, 0, 0, 0, 0], 
+                        backgroundColor: 'rgba(255, 0, 0, 0.3)', 
+                        borderColor: 'red',
+                        pointBackgroundColor: 'red',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'red'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        r: { angleLines: { color: 'rgba(255, 0, 0, 0.3)' }, grid: { color: 'rgba(255, 0, 0, 0.3)' }, pointLabels: { color: '#ffffff' }, ticks: { backdropColor: 'transparent', color: '#ffffff', display: false }, suggestedMin: 0, suggestedMax: 100 }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+            
+            // --- Fake Feature Listeners ---
+            document.getElementById('askQuestionInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    document.getElementById('askQuestionStatus').textContent = `Query "${this.value}" processed. System response simulated...`;
+                    this.value = '';
+                }
+            });
+
+            // --- Modal for Formatted Report Display ---
+            const downloadModalElement = document.getElementById('downloadModal');
+            downloadModalElement.addEventListener('show.bs.modal', function (event) {
+                const outputDiv = document.getElementById('formattedReportOutput');
+                
+                if (Object.keys(lastAnalyzedData).length === 0 || !lastAnalyzedData.metrics) {
+                    outputDiv.innerHTML = '<p class="text-white-50 text-center">Please run a forecast analysis first to generate the report data.</p>';
+                    // 禁用下载按钮
+                    document.getElementById('actualDownloadBtn').disabled = true;
+                    return;
+                }
+                
+                const metrics = lastAnalyzedData.metrics;
+                const analysis = lastAnalyzedData.analysis;
+                
+                // 启用下载按钮
+                document.getElementById('actualDownloadBtn').disabled = false;
+
+
+                // Build the formatted HTML output (no code/json look)
+                let htmlOutput = `
+                    <h4 style="color: var(--neon-purple); border-bottom: 1px solid var(--neon-green); padding-bottom: 5px;">
+                        <i class="fa-solid fa-map-pin me-2"></i> METADATA
+                    </h4>
+                    <table class="table table-borderless table-dark">
+                        <tr><th>Region</th><td>${selectedRegionName}</td></tr>
+                        <tr><th>Coordinates</th><td>Lat: ${currentLat.toFixed(4)}, Lon: ${currentLon.toFixed(4)}</td></tr>
+                        <tr><th>Forecast Date</th><td>${dateInput.value}</td></tr>
+                    </table>
+
+                    <h4 class="mt-4" style="color: var(--neon-purple); border-bottom: 1px solid var(--neon-green); padding-bottom: 5px;">
+                        <i class="fa-solid fa-thermometer-half me-2"></i> WEATHER METRICS
+                    </h4>
+                    <table class="table table-borderless table-dark">
+                        <tr><th>Temperature (Actual)</th><td>${metrics.tempC.toFixed(1)}°C</td></tr>
+                        <tr><th>Feels Like</th><td class="text-warning">${metrics.feelsLikeC.toFixed(1)}°C</td></tr>
+                        <tr><th>Humidity</th><td>${metrics.humidity}%</td></tr>
+                        <tr><th>Wind Speed</th><td>${metrics.windSpeed.toFixed(1)} m/s</td></tr>
+                        <tr><th>Pressure</th><td>${metrics.pressure} hPa</td></tr>
+                        <tr><th>Cloud Cover</th><td>${metrics.cloudiness}%</td></tr>
+                    </table>
+
+                    <h4 class="mt-4" style="color: var(--neon-purple); border-bottom: 1px solid var(--neon-green); padding-bottom: 5px;">
+                        <i class="fa-solid fa-triangle-exclamation me-2"></i> RISK ANALYSIS
+                    </h4>
+                    <table class="table table-borderless table-dark">
+                        <tr><th>Total Risk Index</th><td class="risk-value">${analysis.totalRisk}%</td></tr>
+                        <tr><th>Primary Advisory</th><td class="text-info">${analysis.activityTip.replace(/<[^>]*>?/gm, '')}</td></tr>
+                    </table>
+                `;
+                outputDiv.innerHTML = htmlOutput;
+            });
+
+            // --- Actual JSON Download Button ---
+            document.getElementById('actualDownloadBtn').addEventListener('click', function() {
+                if (Object.keys(lastAnalyzedData).length === 0 || !lastAnalyzedData.metrics) {
+                    alert("Please run a forecast first before downloading the raw JSON data.");
+                    return;
+                }
+                
+                const analysis = lastAnalyzedData.analysis; // 确保 analysis 变量可用
+                
+                // 1. 构建 JSON 数据
+                const dataToExport = {
+                    metadata: {
+                        region: selectedRegionName,
+                        latitude: currentLat ? currentLat.toFixed(4) : 'N/A',
+                        longitude: currentLon ? currentLon.toFixed(4) : 'N/A',
+                        date: dateInput.value,
+                        timestamp: new Date().toISOString()
+                    },
+                    weather_metrics: lastAnalyzedData.metrics || {},
+                    risk_analysis: {
+                        total_risk_percent: lastAnalyzedData.analysis ? lastAnalyzedData.analysis.totalRisk : 'N/A',
+                        risk_proximity: lastAnalyzedData.analysis ? lastAnalyzedData.analysis.riskProximities : [],
+                        // 确保 activityTip 已经被清理过
+                        advisory: lastAnalyzedData.analysis ? analysis.activityTip.replace(/<[^>]*>?/gm, '') : 'No analysis performed.'
+                    }
+                };
+                const jsonString = JSON.stringify(dataToExport, null, 2);
+                
+                // 2. 触发下载
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const filename = `WeatherRisk_Data_${selectedRegionName.replace(/[^a-zA-Z0-9]/g, '_')}_${dateInput.value}.json`;
+                a.download = filename; 
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                document.getElementById('downloadStatus').textContent = `Raw JSON file saved as ${filename}`;
+            });
+
+
+            // --- Modal Data Update Listener (Fixed) ---
+            const metricsModalElement = document.getElementById('metricsDetailModal');
+            metricsModalElement.addEventListener('show.bs.modal', function (event) {
+                if (Object.keys(lastAnalyzedData).length === 0) return;
+
+                const metrics = lastAnalyzedData.metrics;
+                const regionName = selectedRegionName;
+
+                document.getElementById('detailRegionName').textContent = regionName;
+                document.getElementById('detailTemp').textContent = metrics.tempC.toFixed(1);
+                document.getElementById('detailFeelsLike').textContent = metrics.feelsLikeC.toFixed(1);
+                document.getElementById('detailPressure').textContent = metrics.pressure;
+                document.getElementById('detailHumidity').textContent = metrics.humidity;
+                document.getElementById('detailWindSpeed').textContent = metrics.windSpeed.toFixed(1);
+            });
+        });
+        
+        // --- 5. CORE FUNCTION: FETCH WEATHER DATA (Uses internal API_KEY) ---
+        document.getElementById('fetchWeatherBtn').addEventListener('click', async function() {
+            
+            // 检查内置的 API_KEY 常量是否已设置
+            if (API_KEY === "在这里输入你的OpenWeatherMap API Key" || API_KEY.length < 10) {
+                document.getElementById('weatherStatusText').textContent = "ERROR: Please set your OpenWeatherMap API Key in the <script> section of the HTML code.";
+                resetUI();
+                return;
+            }
+
+            const selectedDate = dateInput.value;
+            const isToday = (selectedDate === today);
+            
+            let apiUrl = '';
+            let queryType = '';
+            
+            // 确定查询类型和 API URL
+            if (isMapClickQuery) {
+                // 模式 1: 使用经纬度查询 (lat/lon)
+                const lat = document.getElementById('latInput').value;
+                const lon = document.getElementById('lonInput').value;
+                
+                if (!lat || !lon) {
+                    document.getElementById('weatherStatusText').textContent = "ERROR: Map coordinates are missing. Please click a point on the map or enter a city name.";
+                    return;
+                }
+
+                queryType = 'Lat/Lon';
+                apiUrl = isToday 
+                    ? `${CURRENT_WEATHER_URL}?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric` 
+                    : `${FORECAST_URL}?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`;
+
+                document.getElementById('weatherStatusText').textContent = `Fetching ${isToday ? 'current' : 'forecast'} data for Map Coords: ${lat}, ${lon}...`;
+                
+            } else {
+                // 模式 2: 使用城市名称查询 (q=query)
+                const country = document.getElementById('countryInput').value.trim();
+                const city = document.getElementById('cityInput').value.trim();
+                
+                if (!city) {
+                    document.getElementById('weatherStatusText').textContent = "ERROR: Please enter a District/City name.";
+                    return;
+                }
+                
+                const queryName = country ? `${city}, ${country}` : city;
+                selectedRegionName = queryName; 
+                queryType = 'City Name';
+
+                apiUrl = isToday 
+                    ? `${CURRENT_WEATHER_URL}?q=${queryName}&appid=${API_KEY}&units=metric` 
+                    : `${FORECAST_URL}?q=${queryName}&appid=${API_KEY}&units=metric`;
+                
+                document.getElementById('weatherStatusText').textContent = `Fetching ${isToday ? 'current' : 'forecast'} data for ${queryName}...`;
+            }
+            
+            try {
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+
+                if (data.cod != 200 && data.cod != 201) { 
+                    document.getElementById('weatherStatusText').textContent = `ERROR ${data.cod}: API call failed. Details: ${data.message} (Query Type: ${queryType}). Please check your API Key and query.`;
+                    resetUI();
+                    return;
+                }
+                
+                let weatherData;
+                let cityName;
+                let lat, lon; 
+
+                if (isToday) {
+                    weatherData = data;
+                    cityName = data.name + (data.sys.country ? `, ${data.sys.country}` : ''); 
+                    lat = data.coord.lat;
+                    lon = data.coord.lon;
+                } else {
+                    const targetDate = selectedDate;
+                    const forecastList = data.list;
+                    cityName = data.city.name + (data.city.country ? `, ${data.city.country}` : '');
+                    lat = data.city.coord.lat;
+                    lon = data.city.coord.lon;
+                    
+                    const dailyForecasts = forecastList.filter(item => item.dt_txt.startsWith(targetDate));
+                    
+                    if (dailyForecasts.length === 0) {
+                        document.getElementById('weatherStatusText').textContent = `ERROR: No forecast data found for ${targetDate}. (Forecasts are 5 days max).`;
+                        resetUI();
+                        return;
+                    }
+                    
+                    // 选取中午左右的数据，通常在列表的中间位置
+                    weatherData = dailyForecasts[Math.floor(dailyForecasts.length / 2)];
+                }
+                
+                currentLat = lat;
+                currentLon = lon;
+                selectedRegionName = cityName; 
+
+                map.setView([currentLat, currentLon], 10);
+                if (marker) {
+                    marker.setLatLng([currentLat, currentLon]);
+                } else {
+                    marker = L.marker([currentLat, currentLon]).addTo(map);
+                }
+                marker.bindPopup(selectedRegionName).openPopup();
+                
+                document.getElementById('countryInput').value = cityName.split(', ')[1] || '';
+                document.getElementById('cityInput').value = cityName.split(', ')[0] || '';
+
+
+                // --- Metrics Extraction ---
+                const tempC = weatherData.main.temp;
+                const feelsLikeC = weatherData.main.feels_like;
+                const pressure = weatherData.main.pressure;
+                const humidity = weatherData.main.humidity;
+                const windSpeed = weatherData.wind.speed;
+                const cloudiness = weatherData.clouds.all;
+                
+                const analysis = analyzeWeatherRisk(tempC, humidity, windSpeed, cloudiness);
+                
+                lastAnalyzedData = {
+                    metrics: { tempC, feelsLikeC, pressure, humidity, windSpeed, cloudiness },
+                    analysis: analysis
+                };
+                
+                updateConsoleUI(selectedRegionName, tempC, feelsLikeC, pressure, humidity, windSpeed, cloudiness, analysis);
+                
+            } catch (error) {
+                document.getElementById('weatherStatusText').textContent = `An error occurred: ${error.message}. Check API Key/City Name/Network.`;
+                resetUI();
+            }
+        });
+
+        // --- 6. LOGIC FUNCTION: CALCULATE RISK AND ADVICE ---
+        function analyzeWeatherRisk(tempC, humidity, windSpeed, cloudiness) {
+            let riskCount = 0;
+            let riskProximities = [0, 0, 0, 0, 0]; 
+            let status = "Conditions are mostly comfortable.";
+            let promptText = "✅ CONDITIONS OPTIMAL: Good to go!";
+            let promptClass = "";
+
+            if (tempC > THRESHOLDS['Very Hot']) { 
+                riskCount++; riskProximities[0] = Math.min(100, (tempC - THRESHOLDS['Very Hot']) * 10 + 30); status = "Very Hot"; 
+                promptText = "🔥 WARNING: TEMPERATURE TOO HOT! (>30°C)";
+                promptClass = "prompt-hot";
+            }
+            if (tempC < THRESHOLDS['Very Cold']) { 
+                riskCount++; riskProximities[1] = Math.min(100, (THRESHOLDS['Very Cold'] - tempC) * 10 + 30); status = "Very Cold"; 
+                promptText = "❄️ WARNING: TEMPERATURE TOO COLD! (<5°C)";
+                promptClass = "prompt-cold";
+            }
+            if (humidity > THRESHOLDS['Very Wet']) { 
+                riskCount++; riskProximities[2] = humidity; status = "Very Wet";
+                if (!promptClass) { promptText = "💧 CAUTION: HIGH HUMIDITY! (>80%)"; promptClass = "prompt-box"; }
+            }
+            if (windSpeed > THRESHOLDS['Very Windy']) { 
+                riskCount++; riskProximities[3] = Math.min(100, windSpeed * 10); status = "Very Windy"; 
+                if (!promptClass) { promptText = "💨 CAUTION: STRONG WINDS! (>10 m/s)"; promptClass = "prompt-box"; }
+            }
+            if (cloudiness > THRESHOLDS['Too Cloudy']) { 
+                riskCount++; riskProximities[4] = cloudiness; status = "Too Cloudy"; 
+                if (!promptClass) { promptText = "☁️ CAUTION: HEAVY CLOUD COVER! (>75%)"; promptClass = "prompt-cloudy"; }
+            }
+            
+            const maxRisk = Math.max(...riskProximities);
+            const totalRisk = Math.min(100, maxRisk + riskCount * 10); 
+
+            let activityTip = '';
+            if (totalRisk > 70) {
+                activityTip = `<span style="color: #dc3545;">DANGER: POSTPONE OUTDOOR ACTIVITY.</span> Severe risk, indoor stay advised.`;
+            } else if (totalRisk > 50) {
+                activityTip = `<span style="color: #ffc107;">CAUTION: LIMITED ACTIVITY.</span> Reduce outdoor time and take precautions.`;
+            } else if (totalRisk > 30) {
+                 activityTip = `<span style="color: #00ffc8;">FAIR CONDITIONS.</span> Weather is acceptable, be mindful of the ${status.split('.')[0].toLowerCase()} status.`;
+            }
+             else {
+                activityTip = `<span style="color: #40e040;">OPTIMAL CONDITIONS!</span> Excellent weather for prolonged outdoor activity.`;
+            }
+
+            return {
+                totalRisk: Math.round(totalRisk),
+                riskProximities: riskProximities,
+                status: status,
+                promptText: promptText,
+                promptClass: promptClass,
+                activityTip: activityTip
+            };
+        }
+
+        // --- 7. UI UPDATE FUNCTION ---
+        function updateConsoleUI(cityName, tempC, feelsLikeC, pressure, humidity, windSpeed, cloudiness, analysis) {
+            const totalRisk = analysis.totalRisk;
+
+            // 1. 更新当前分析的坐标和状态 (确保始终更新)
+            document.getElementById('locationStatus').textContent = cityName.toUpperCase();
+            document.getElementById('currentCoordsDisplay').textContent = `Lat: ${currentLat.toFixed(4)}, Lon: ${currentLon.toFixed(4)}`;
+
+            // 2. 更新气象指标
+            document.getElementById('tempDisplay').textContent = tempC.toFixed(1);
+            document.getElementById('humidityDisplay').textContent = humidity;
+            document.getElementById('windDisplay').textContent = windSpeed.toFixed(1);
+            document.getElementById('feelsLikeDisplay').textContent = feelsLikeC.toFixed(1);
+            document.getElementById('pressureDisplay').textContent = pressure;
+
+            // 3. 更新风险指标和雷达图
+            document.getElementById('riskDisplay').textContent = `${totalRisk}%`;
+            document.getElementById('weatherStatusText').textContent = analysis.status;
+            
+            const riskColor = totalRisk < 50 ? 'var(--neon-green)' : 'red';
+            const safeColor = totalRisk < 50 ? 'var(--neon-purple)' : '#21262d'; 
+            document.getElementById('riskCircle').style.background = `conic-gradient(${riskColor} 0%, ${safeColor} ${totalRisk}%, #21262d ${totalRisk}%)`;
+
+            radarChart.data.datasets[0].data = analysis.riskProximities;
+            radarChart.data.datasets[0].label = `Weather Data for ${cityName}`;
+            radarChart.update();
+            
+            const promptBox = document.getElementById('riskPrompt');
+            promptBox.textContent = analysis.promptText;
+            promptBox.className = `prompt-box mt-3 text-center ${analysis.promptClass}`;
+
+            // 4. 更新云量条
+            document.getElementById('cloudCover').textContent = cloudiness;
+            document.getElementById('cloudBar').style.width = `${cloudiness}%`;
+            document.getElementById('cloudBar').className = 'progress-bar'; 
+            if (cloudiness < 30) {
+                document.getElementById('cloudBar').classList.add('bg-success');
+                document.getElementById('cloudTip').textContent = 'Clear skies predicted. Ideal for observation.';
+            } else if (cloudiness < THRESHOLDS['Too Cloudy']) {
+                 document.getElementById('cloudBar').classList.add('bg-warning');
+                 document.getElementById('cloudTip').textContent = 'Moderate cloudiness. Views may be intermittently obscured.';
+            } else {
+                document.getElementById('cloudBar').classList.add('bg-danger');
+                document.getElementById('cloudTip').textContent = 'Heavy cloud cover. Not ideal for sunny activities.';
+            }
+
+            document.getElementById('activityTip').innerHTML = analysis.activityTip;
+
+            const resultArea = document.getElementById('resultArea');
+            resultArea.className = 'alert mt-3'; 
+            if (totalRisk < 30) {
+                resultArea.classList.add('alert-success');
+            } else if (totalRisk < 70) {
+                resultArea.classList.add('alert-warning');
+            } else {
+                resultArea.classList.add('alert-danger');
+            }
+        }
+        
+        // --- 8. RESET FUNCTION ---
+        function resetUI() {
+            document.getElementById('riskDisplay').textContent = `0%`;
+            document.getElementById('riskCircle').style.background = `conic-gradient(var(--neon-green) 0%, var(--neon-purple) 0%, #21262d 0%)`;
+            document.getElementById('tempDisplay').textContent = 'N/A';
+            document.getElementById('humidityDisplay').textContent = 'N/A';
+            document.getElementById('windDisplay').textContent = 'N/A';
+            document.getElementById('feelsLikeDisplay').textContent = 'N/A';
+            document.getElementById('pressureDisplay').textContent = 'N/A';
+            document.getElementById('currentCoordsDisplay').textContent = 'Lat: N/A, Lon: N/A';
+            document.getElementById('cloudCover').textContent = 'N/A';
+            document.getElementById('cloudBar').style.width = '0%';
+            document.getElementById('activityTip').innerHTML = 'Analysis failed, please check date and API key.';
+            document.getElementById('riskPrompt').textContent = '⚠️ ANALYSIS FAILED. CHECK CONSOLE/NETWORK.';
+            document.getElementById('riskPrompt').className = 'prompt-box mt-3 text-center prompt-hot';
+            document.getElementById('locationStatus').textContent = 'ERROR';
+            radarChart.data.datasets[0].data = [0, 0, 0, 0, 0];
+            radarChart.update();
+            
+            if (marker) {
+                map.removeLayer(marker);
+                marker = null;
+            }
+            currentLat = null;
+            currentLon = null;
+            
+            // 确保禁用下载按钮直到有新数据
+            document.getElementById('actualDownloadBtn').disabled = true;
+        }
+    </script>
+</body>
+</html>
